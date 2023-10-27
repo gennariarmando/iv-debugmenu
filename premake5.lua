@@ -1,77 +1,69 @@
-workspace "debugmenu"
-	configurations { "Release", "Debug" }
-	location "build"
-
-	files { "src/*.*" }
-
-project "debugmenu_III"
+workspace "iv-debugmenu"
+	configurations { "ReleaseIV", "DebugIV" }
+	location "project_files"
+   
+project "iv-debugmenu"
 	kind "SharedLib"
 	language "C++"
-	targetdir "bin/%{cfg.buildcfg}"
-	targetextension ".dll"
+	targetdir "output/asi/"
+	objdir ("output/obj")
+	targetextension ".asi"
 	characterset ("MBCS")
-	defines { "GTA3" }
-	includedirs { os.getenv("RWSDK33") }
+	linkoptions "/SAFESEH:NO"
+	buildoptions { "/permissive" }
+	defines { "_CRT_SECURE_NO_WARNINGS", "_CRT_NON_CONFORMING_SWPRINTFS", "_USE_MATH_DEFINES" }
+	disablewarnings { "4244", "4800", "4305", "4073", "4838", "4996", "4221", "4430", "26812", "26495", "6031" }
+	cppdialect "c++17"
 
-	filter "configurations:Debug"
+	files {
+		"source/**.*",
+	}
+	
+	includedirs { 
+		"source/**",
+		"vendor/**"
+	}
+	
+	includedirs {
+		"vendor/GInputAPI",
+		"$(PLUGIN_SDK_DIR)/shared/",
+		"$(PLUGIN_SDK_DIR)/shared/game/",
+	}
+	
+	filter { "configurations:*IV" }
+		defines { "GTAIV", "PLUGIN_SGV_CE", "RAGE" }
+		includedirs {
+			"$(PLUGIN_SDK_DIR)/plugin_IV/",
+			"$(PLUGIN_SDK_DIR)/plugin_IV/game_IV/",
+		}
+		targetname "DebugIV"
+		debugdir "$(GTA_IV_DIR)"
+		debugcommand "$(GTA_IV_DIR)/GTAIV.exe"
+		postbuildcommands "copy /y \"$(TargetPath)\" \"$(GTA_IV_DIR)\\plugins\\DebugIV.asi\""
+		
+	filter { }
+	
+	libdirs { 
+		"$(PLUGIN_SDK_DIR)/output/lib/",
+		"$(DXSDK_DIR)/Lib/x86",
+		"$(PLUGIN_SDK_DIR)\\shared\\bass",
+	}
+	
+	filter "configurations:Debug*"		
 		defines { "DEBUG" }
-		symbols "On"
-		debugdir "C:/Users/aap/games/gta3"
-		debugcommand "C:/Users/aap/games/gta3/gta3.exe"
-		postbuildcommands "copy /y \"$(TargetPath)\" \"C:\\Users\\aap\\games\\gta3\\debugmenu.dll\""
+		symbols "on"
+		staticruntime "on"
 
-	filter "configurations:Release"
+	filter "configurations:Release*"
 		defines { "NDEBUG" }
+		symbols "off"
 		optimize "On"
-		flags { "StaticRuntime" }
-		debugdir "C:/Users/aap/games/gta3"
-		debugcommand "C:/Users/aap/games/gta3/gta3.exe"
-		postbuildcommands "copy /y \"$(TargetPath)\" \"C:\\Users\\aap\\games\\gta3\\debugmenu.dll\""
-
-project "debugmenu_VC"
-	kind "SharedLib"
-	language "C++"
-	targetdir "bin/%{cfg.buildcfg}"
-	targetextension ".dll"
-	characterset ("MBCS")
-	defines { "GTAVC" }
-	includedirs { os.getenv("RWSDK34") }
-
-	filter "configurations:Debug"
-		defines { "DEBUG" }
-		symbols "On"
-		debugdir "C:/Users/aap/games/gtavc"
-		debugcommand "C:/Users/aap/games/gtavc/gta_vc.exe"
-		postbuildcommands "copy /y \"$(TargetPath)\" \"C:\\Users\\aap\\games\\gtavc\\debugmenu.dll\""
-
-	filter "configurations:Release"
-		defines { "NDEBUG" }
-		optimize "On"
-		flags { "StaticRuntime" }
-		debugdir "C:/Users/aap/games/gtavc"
-		debugcommand "C:/Users/aap/games/gtavc/gta_vc.exe"
-		postbuildcommands "copy /y \"$(TargetPath)\" \"C:\\Users\\aap\\games\\gtavc\\debugmenu.dll\""
-
-project "debugmenu_SA"
-	kind "SharedLib"
-	language "C++"
-	targetdir "bin/%{cfg.buildcfg}"
-	targetextension ".dll"
-	characterset ("MBCS")
-	defines { "GTASA" }
-	includedirs { os.getenv("RWSDK36") }
-
-	filter "configurations:Debug"
-		defines { "DEBUG" }
-		symbols "On"
-		debugdir "C:/Users/aap/games/gtasa"
-		debugcommand "C:/Users/aap/games/gtasa/gta_sa.exe"
-		postbuildcommands "copy /y \"$(TargetPath)\" \"C:\\Users\\aap\\games\\gtasa\\debugmenu.dll\""
-
-	filter "configurations:Release"
-		defines { "NDEBUG" }
-		optimize "On"
-		flags { "StaticRuntime" }
-		debugdir "C:/Users/aap/games/gtasa"
-		debugcommand "C:/Users/aap/games/gtasa/gta_sa.exe"
-		postbuildcommands "copy /y \"$(TargetPath)\" \"C:\\Users\\aap\\games\\gtasa\\debugmenu.dll\""
+		staticruntime "on"
+		
+	filter "configurations:ReleaseIV"
+		links { "plugin_iv" }
+		
+	filter "configurations:DebugIV"
+		links { "plugin_iv_d" }
+			
+	filter { }
