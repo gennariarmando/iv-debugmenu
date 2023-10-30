@@ -3,11 +3,13 @@
 #include "Rage.h"
 #include "CSprite2d.h"
 #include "inttypes.h"
+#include "CKeyboardMgr.h"
 
 #define EXPORT extern "C" __declspec(dllexport)
 
-#define KEYJUSTDOWN(k) (CPad::GetPad(0)->KeyboardMgr.IsKeyJustPressed((eKeyCodes)k, 2, 0))
-#define KEYDOWN(k) (CPad::GetPad(0)->KeyboardMgr.IsKeyPressed((eKeyCodes)k, 2, 0))
+static CKeyboardMgr ctrldummy;
+#define KEYJUSTDOWN(k) (ctrldummy.IsKeyJustPressed((eKeyCodes)k, 2, 0))
+#define KEYDOWN(k) (ctrldummy.IsKeyPressed((eKeyCodes)k, 2, 0))
 #define CTRLJUSTDOWN(key) ((KEYDOWN(eKeyCodes::KEY_LCONTROL) || KEYDOWN(eKeyCodes::KEY_RCONTROL)) && KEYJUSTDOWN((eKeyCodes)key))
 #define CTRLDOWN(key) ((KEYDOWN(eKeyCodes::KEY_LCONTROL) || KEYDOWN(eKeyCodes::KEY_RCONTROL)) && KEYDOWN((eKeyCodes)key))
 
@@ -30,6 +32,7 @@ EXPORT void DebugMenuInit();
 EXPORT void DebugMenuShutdown();
 EXPORT void DebugMenuProcess();
 EXPORT void DebugMenuRender();
+EXPORT bool DebugMenuShowing();
 
 extern int menuOn;
 

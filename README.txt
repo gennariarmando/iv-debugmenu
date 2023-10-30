@@ -1,9 +1,9 @@
-This is a debug menu for GTA III, VC and SA.
+This is a debug menu for GTA IV CE.
 
 The idea is that other plugins load this dll and add variables
 and commands to it so they can be edited from within the game.
 
-It is currently compatible with 1.0 US executables.
+It is currently compatible with GTAIV: The Complete Edition.
 
 How to install
 ==============

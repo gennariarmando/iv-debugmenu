@@ -42,8 +42,8 @@ static int* buttonptr;
 static int button1justdown, button2justdown, button3justdown;
 static float mouseX, mouseY;
 
-int menuOn;
-static int menuInitialized;
+static int menuOn = 0;
+static int menuInitialized = 0;
 
 static int firstBorder = 10;
 static int topBorder = 10;
@@ -109,7 +109,7 @@ MenuEntry_Int::MenuEntry_Int(const char* name)
 }
 
 #define X(NAME, TYPE, MAXLEN, FMT) \
-int	MenuEntry_##NAME::findStringLen(void) { \
+int	MenuEntry_##NAME::findStringLen() { \
 	TYPE i;							     \
 	int len, maxlen = 0;					     \
 	for(i = this->lowerBound; i <= this->upperBound; i++) { \
@@ -119,9 +119,7 @@ int	MenuEntry_##NAME::findStringLen(void) { \
 	} \
 	return maxlen; \
 } \
-void \
-MenuEntry_##NAME::processInput(bool mouseOver, bool selected) \
-{ \
+void MenuEntry_##NAME::processInput(bool mouseOver, bool selected) { \
 	TYPE v, oldv; \
 	int overflow = 0; \
 	int underflow = 0; \
@@ -197,14 +195,10 @@ MenuEntry_##NAME::MenuEntry_##NAME(const char *name, TYPE *ptr, TriggerFunc trig
 	this->maxvallen = MAXLEN; \
 	this->fmt = FMT; \
 } \
-void \
-MenuEntry_##NAME::getValStr(char *str, int len) \
-{ \
+void MenuEntry_##NAME::getValStr(char *str, int len) { \
 	snprintf(str, len, this->fmt, *this->variable); \
 } \
-void \
-MenuEntry_##NAME::processInput(bool mouseOver, bool selected) \
-{ \
+void MenuEntry_##NAME::processInput(bool mouseOver, bool selected) { \
 	float v, oldv; \
 	int overflow = 0; \
 	int underflow = 0; \
@@ -244,8 +238,7 @@ MenuEntry_##NAME::processInput(bool mouseOver, bool selected) \
      * *****************************
      */
 
-    void
-    MenuEntry_Cmd::processInput(bool mouseOver, bool selected) {
+void MenuEntry_Cmd::processInput(bool mouseOver, bool selected) {
     // Don't execute on button3
     if (this->triggerFunc && (selected && (leftjustdown || rightjustdown) || (mouseOver && button1justdown)))
         this->triggerFunc();
@@ -401,8 +394,7 @@ void Menu::update() {
     }
 }
 
-void
-Menu::draw(void) {
+void Menu::draw() {
     static char val[100];
     int i;
     MenuEntry* e;
@@ -435,8 +427,7 @@ Menu::draw(void) {
         ((MenuEntry_Sub*)this->selectedEntry)->submenu->draw();
 }
 
-Menu*
-findMenu(const char* name) {
+Menu* findMenu(const char* name) {
     Menu* m;
     MenuEntry* e;
     char* tmppath = strdup(name);
@@ -488,10 +479,6 @@ findMenu(const char* name) {
  * ****************
  */
 
-void initDebug() {
-
-}
-
 void processInput() {
     int shift = KEYDOWN(eKeyCodes::KEY_RSHIFT) || KEYDOWN(eKeyCodes::KEY_LSHIFT);
 #define X(var, keycode) var = KEYJUSTDOWN(keycode);
@@ -501,7 +488,7 @@ void processInput() {
         // Implement auto-repeat
 #define X(var, keycode) \
 	if(var){ \
-		repeattime = downtime = CTimer::m_snTimeInMilliseconds; \
+		repeattime = downtime = CTimer::GetTimeInMilliseconds(); \
 		lastkeydown = keycode; \
 		keyptr = &var; \
 	}
@@ -509,7 +496,7 @@ void processInput() {
 #undef X
         if (lastkeydown) {
             if (KEYDOWN(lastkeydown)) {
-                int curtime = CTimer::m_snTimeInMilliseconds;
+                int curtime = CTimer::GetTimeInMilliseconds();
                 if (curtime - downtime > REPEATDELAY) {
                     if (curtime - repeattime > REPEATINTERVAL) {
                         repeattime = curtime;
@@ -525,7 +512,7 @@ void processInput() {
     // Also for mouse buttons
 #define X(var, num) \
 	if(var) { \
-		repeattime = downtime = CTimer::m_snTimeInMilliseconds; \
+		repeattime = downtime = CTimer::GetTimeInMilliseconds(); \
 		lastbuttondown = num; \
 		buttonptr = &var; \
 	}
@@ -533,7 +520,7 @@ void processInput() {
 #undef X
         if (lastbuttondown) {
             if (buttondown[lastbuttondown - 1]) {
-                int curtime = CTimer::m_snTimeInMilliseconds;
+                int curtime = CTimer::GetTimeInMilliseconds();
                 if (curtime - downtime > REPEATDELAY) {
                     if (curtime - repeattime > REPEATINTERVAL) {
                         repeattime = curtime;
@@ -644,9 +631,7 @@ void processInput() {
     }
 }
 
-void
-updateMouse(void) {
-    CPad* pad = CPad::GetPad(0);
+void updateMouse() {
     int dirX = 1;
     int dirY = 1;
 
@@ -655,15 +640,18 @@ updateMouse(void) {
     mouseX *= SCREEN_WIDTH;
     mouseY *= SCREEN_HEIGHT;
 
-    button1justdown = CPad::GetPad(0)->IsMouseButtonJustPressed(1);
-    button2justdown = CPad::GetPad(0)->IsMouseButtonJustPressed(3);
-    button3justdown = CPad::GetPad(0)->IsMouseButtonJustPressed(2);
-    buttondown[0] = CPad::GetPad(0)->IsMouseButtonPressed(1);
-    buttondown[1] = CPad::GetPad(0)->IsMouseButtonPressed(3);
-    buttondown[2] = CPad::GetPad(0)->IsMouseButtonPressed(2);
+    button1justdown = CPad::IsMouseButtonJustPressed(1);
+    button2justdown = CPad::IsMouseButtonJustPressed(3);
+    button3justdown = CPad::IsMouseButtonJustPressed(2);
+    buttondown[0] = CPad::IsMouseButtonPressed(1);
+    buttondown[1] = CPad::IsMouseButtonPressed(3);
+    buttondown[2] = CPad::IsMouseButtonPressed(2);
 }
 
 EXPORT void DebugMenuInit() {
+    if (menuInitialized == 1)
+        return;
+
     int32_t slot = CTxdStore::AddTxdSlot("dbgmenu");
     CTxdStore::LoadTxd(slot, "platform:/textures/debugmenu");
     CTxdStore::AddRef(slot);
@@ -675,24 +663,31 @@ EXPORT void DebugMenuInit() {
     cursorSprite.SetTexture("cursor");
 
     CTxdStore::PopCurrentTxd();
+
+    menuInitialized = 1;
 }
 
 EXPORT void DebugMenuShutdown() {
+    if (menuInitialized == 0)
+        return;
+
     arrowSprite.Delete();
     fontSprite.Delete();
     cursorSprite.Delete();
 
     int32_t slot = CTxdStore::FindTxdSlot("dbgmenu");
     CTxdStore::RemoveTxdSlot(slot);
+
+    menuInitialized = 0;
 }
 
 EXPORT void DebugMenuProcess() {
-    // We only process some input here
     if (CTRLJUSTDOWN(eKeyCodes::KEY_M)) {
         menuOn ^= 1;
 
         auto playa = FindPlayerPed(0);
         auto cam = TheCamera.m_pCamGame;
+
         if (playa)
             playa->m_pPlayerInfo->m_bDisableControls = menuOn;
 
@@ -703,11 +698,6 @@ EXPORT void DebugMenuProcess() {
     if (!menuOn)
         return;
 
-    // TODO: this could happen earlier
-    if (!menuInitialized) {
-        initDebug();
-        menuInitialized = 1;
-    }
     updateMouse();
 
     toplevel.update();
@@ -742,6 +732,10 @@ EXPORT void DebugMenuRender() {
     base->Append();
 }
 
+EXPORT bool DebugMenuShowing() {
+    return menuOn;
+}
+
 void drawArrow(rage::Vector4 r, int direction, int style) {
     int width = arrowSprite.m_pTexture->getWidth();
     int height = arrowSprite.m_pTexture->getHeight();
@@ -769,7 +763,7 @@ void drawArrow(rage::Vector4 r, int direction, int style) {
     CSprite2d::Pop();
 }
 
-void drawMouse(void) {
+void drawMouse() {
     float x = mouseX;
     float y = mouseY;
     float w = cursorSprite.m_pTexture->getWidth();

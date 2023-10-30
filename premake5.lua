@@ -5,9 +5,9 @@ workspace "iv-debugmenu"
 project "iv-debugmenu"
 	kind "SharedLib"
 	language "C++"
-	targetdir "output/asi/"
+	targetdir "output/dll/"
 	objdir ("output/obj")
-	targetextension ".asi"
+	targetextension ".dll"
 	characterset ("MBCS")
 	linkoptions "/SAFESEH:NO"
 	buildoptions { "/permissive" }
@@ -36,10 +36,10 @@ project "iv-debugmenu"
 			"$(PLUGIN_SDK_DIR)/plugin_IV/",
 			"$(PLUGIN_SDK_DIR)/plugin_IV/game_IV/",
 		}
-		targetname "DebugIV"
+		targetname "debugmenu"
 		debugdir "$(GTA_IV_DIR)"
 		debugcommand "$(GTA_IV_DIR)/GTAIV.exe"
-		postbuildcommands "copy /y \"$(TargetPath)\" \"$(GTA_IV_DIR)\\plugins\\DebugIV.asi\""
+		postbuildcommands "copy /y \"$(TargetPath)\" \"$(GTA_IV_DIR)\\debugmenu.dll\""
 		
 	filter { }
 	
