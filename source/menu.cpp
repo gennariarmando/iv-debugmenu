@@ -55,6 +55,8 @@ static int fontscale = 1;
 static int fontGlyphWidth = 8;
 static int fontGlyphHeight = 16;
 static int fontNumGlyphs = 256;
+static int fontShadow = 1;
+static int fontOutline = 0;
 
 static CSprite2d cursorSprite, fontSprite, arrowSprite;
 
@@ -776,6 +778,8 @@ void drawMouse() {
 
 Pt fontPrint(const char* s, float xstart, float ystart, int style) {
     rage::Color32 col = { 225, 225, 225, 225 };
+    rage::Color32 sel = { 132, 132, 132, 255 };
+    rage::Color32 drop = { 0, 0, 0, 255 };
 
     switch (style) {
         case FONT_SEL_ACTIVE:
@@ -802,9 +806,9 @@ Pt fontPrint(const char* s, float xstart, float ystart, int style) {
     uhalf = 0.5f / fontSprite.m_pTexture->getWidth();
     vhalf = 0.5f / fontSprite.m_pTexture->getHeight();
 
+    Pt fntSize = fontGetStringSize(s);
     if (style == FONT_SEL_ACTIVE) {
-        Pt fntSize = fontGetStringSize(s);
-        CSprite2d::DrawRect({ x - 1, y - 1, x + fntSize.x + 1, y + fntSize.y + 1 }, { 132, 132, 132, 255 });
+        CSprite2d::DrawRect({ x - 1, y - 1, x + fntSize.x + 1, y + fntSize.y + 1 }, sel);
     }
 
     while (char c = *s++) {
@@ -824,7 +828,17 @@ Pt fontPrint(const char* s, float xstart, float ystart, int style) {
         v = (c / 16) * fontGlyphHeight / (float)fontSprite.m_pTexture->getHeight();
 
         fontSprite.Push();
+        if (fontShadow) {
+            CSprite2d::Draw({ x + 1, y + 1, x + 1 + fontGlyphWidth * fontscale, y + 1 + fontGlyphHeight * fontscale }, { u, v, u + du + uhalf, v + dv + vhalf }, drop);
+        }
+        if (fontOutline) {
+            CSprite2d::Draw({ x - 1, y, x - 1 + fontGlyphWidth * fontscale, y + fontGlyphHeight * fontscale }, { u, v, u + du + uhalf, v + dv + vhalf }, drop);
+            CSprite2d::Draw({ x, y - 1, x + fontGlyphWidth * fontscale, y - 1 + fontGlyphHeight * fontscale }, { u, v, u + du + uhalf, v + dv + vhalf }, drop);
+            CSprite2d::Draw({ x, y + 1, x + fontGlyphWidth * fontscale, y + 1 + fontGlyphHeight * fontscale }, { u, v, u + du + uhalf, v + dv + vhalf }, drop);
+            CSprite2d::Draw({ x + 1, y, x + 1 + fontGlyphWidth * fontscale, y + fontGlyphHeight * fontscale }, { u, v, u + du + uhalf, v + dv + vhalf }, drop);
+        }
         CSprite2d::Draw({ x, y, x + fontGlyphWidth * fontscale, y + fontGlyphHeight * fontscale }, { u, v, u + du + uhalf, v + dv + vhalf }, col);
+    
         CSprite2d::Pop();
 
         x += fontGlyphWidth * fontscale;
