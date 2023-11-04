@@ -55,8 +55,8 @@ static int fontscale = 1;
 static int fontGlyphWidth = 8;
 static int fontGlyphHeight = 16;
 static int fontNumGlyphs = 256;
-static int fontShadow = 1;
-static int fontOutline = 0;
+static int fontShadow = 0;
+static int fontOutline = 1;
 
 static CSprite2d cursorSprite, fontSprite, arrowSprite;
 
@@ -69,6 +69,20 @@ Menu* deepestMenu = &toplevel;
 Menu* mouseOverMenu;
 MenuEntry* mouseOverEntry;
 MenuEntry scrollUpEntry("SCROLLUP"), scrollDownEntry("SCROLLDOWN");	// dummies
+
+DWORD prevMin, prevMag;
+
+void RestoreRenderStates() {
+    rage::GetD3DDevice()->SetSamplerState(0, D3DSAMP_MINFILTER, prevMin);
+    rage::GetD3DDevice()->SetSamplerState(0, D3DSAMP_MAGFILTER, prevMag);
+}
+
+void SetRenderStates() {
+    rage::GetD3DDevice()->GetSamplerState(0, D3DSAMP_MINFILTER, &prevMin);
+    rage::GetD3DDevice()->GetSamplerState(0, D3DSAMP_MAGFILTER, &prevMag);
+    rage::GetD3DDevice()->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_POINT);
+    rage::GetD3DDevice()->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
+}
 
 bool isMouseInRect(rage::Vector4 r) {
     return (mouseX >= r.left && mouseX < r.left + r.right &&
@@ -690,12 +704,19 @@ EXPORT void DebugMenuProcess() {
         auto playa = FindPlayerPed(0);
         auto cam = TheCamera.m_pCamGame;
 
-        if (playa)
+        if (playa) {
             playa->m_pPlayerInfo->m_bDisableControls = menuOn;
+            playa->m_pPlayerInfo->m_PlayerData.m_Wanted.m_bIgnoredByEveryone = menuOn;
+        }
 
         if (cam)
             cam->m_bDisableControls = menuOn;
     }
+
+    if (rage::screenHeight > 1080)
+        fontscale = 2;
+    else
+        fontscale = 1;
 
     if (!menuOn)
         return;
@@ -711,12 +732,6 @@ EXPORT void DebugMenuRender() {
         return;
 
     auto base = new T_CB_Generic([] {
-        DWORD previousFilterMode;
-        rage::GetD3DDevice()->GetSamplerState(0, D3DSAMP_MINFILTER, &previousFilterMode);
-        rage::GetD3DDevice()->GetSamplerState(0, D3DSAMP_MAGFILTER, &previousFilterMode);
-        rage::GetD3DDevice()->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_POINT);
-        rage::GetD3DDevice()->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
-
         Pt sz;
         sz = fontPrint("Debug Menu", firstBorder * fontscale, topBorder, 0);
 
@@ -728,8 +743,6 @@ EXPORT void DebugMenuRender() {
 
         drawMouse();
 
-        rage::GetD3DDevice()->SetSamplerState(0, D3DSAMP_MINFILTER, previousFilterMode);
-        rage::GetD3DDevice()->SetSamplerState(0, D3DSAMP_MAGFILTER, previousFilterMode);
     });
     base->Append();
 }
@@ -738,7 +751,16 @@ EXPORT bool DebugMenuShowing() {
     return menuOn;
 }
 
+EXPORT void DebugMenuPrintString(const char* str, float x, float y, int style) {
+    fontPrint(str, x, y, style);
+}
+
+EXPORT int DebugMenuGetStringSize(const char* str) {
+    return fontGetStringSize(str).x;
+}
+
 void drawArrow(rage::Vector4 r, int direction, int style) {
+    SetRenderStates();
     int width = arrowSprite.m_pTexture->getWidth();
     int height = arrowSprite.m_pTexture->getHeight();
 
@@ -763,9 +785,11 @@ void drawArrow(rage::Vector4 r, int direction, int style) {
     arrowSprite.Push();
     CSprite2d::Draw({ left, top, right, bottom }, { umin, vmin, umax, vmax }, { 255, 255, 255, 255 });
     CSprite2d::Pop();
+    RestoreRenderStates();
 }
 
 void drawMouse() {
+    SetRenderStates();
     float x = mouseX;
     float y = mouseY;
     float w = cursorSprite.m_pTexture->getWidth();
@@ -774,9 +798,12 @@ void drawMouse() {
     cursorSprite.Push();
     CSprite2d::Draw(x, y, w, h, { 255, 255, 255, 255 });
     CSprite2d::Pop();
+    RestoreRenderStates();
 }
 
 Pt fontPrint(const char* s, float xstart, float ystart, int style) {
+    SetRenderStates();
+
     rage::Color32 col = { 225, 225, 225, 225 };
     rage::Color32 sel = { 132, 132, 132, 255 };
     rage::Color32 drop = { 0, 0, 0, 255 };
@@ -847,6 +874,8 @@ Pt fontPrint(const char* s, float xstart, float ystart, int style) {
 
     if (szx > sz.x)
         sz.x = szx;
+
+    RestoreRenderStates();
 
     return sz;
 }

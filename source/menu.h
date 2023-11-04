@@ -33,6 +33,8 @@ EXPORT void DebugMenuShutdown();
 EXPORT void DebugMenuProcess();
 EXPORT void DebugMenuRender();
 EXPORT bool DebugMenuShowing();
+EXPORT void DebugMenuPrintString(const char* str, float x, float y, int style);
+EXPORT int DebugMenuGetStringSize(const char* str);
 
 extern int menuOn;
 
