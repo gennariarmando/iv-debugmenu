@@ -16,8 +16,7 @@
 extern "C" {
 
 #define X(NAME, TYPE) \
-EXPORT MenuEntry* \
-DebugMenuAdd##NAME(const char *path, const char *name, TYPE *ptr, TriggerFunc triggerFunc, TYPE step, TYPE lowerBound, TYPE upperBound, const char **strings) { \
+EXPORT MenuEntry* DebugMenuAdd##NAME(const char *path, const char *name, TYPE *ptr, TriggerFunc triggerFunc, TYPE step, TYPE lowerBound, TYPE upperBound, const char **strings) { \
 	Menu *m = findMenu(path); \
 	if(m == NULL) \
 		return NULL; \
@@ -29,8 +28,7 @@ DebugMenuAdd##NAME(const char *path, const char *name, TYPE *ptr, TriggerFunc tr
 #undef X
 
 #define X(NAME, TYPE) \
-EXPORT MenuEntry* \
-DebugMenuAdd##NAME(const char *path, const char *name, TYPE *ptr, TriggerFunc triggerFunc, TYPE step, TYPE lowerBound, TYPE upperBound) { \
+EXPORT MenuEntry* DebugMenuAdd##NAME(const char *path, const char *name, TYPE *ptr, TriggerFunc triggerFunc, TYPE step, TYPE lowerBound, TYPE upperBound) { \
 	Menu *m = findMenu(path); \
 	if(m == NULL) \
 		return NULL; \
@@ -75,4 +73,8 @@ DebugMenuAdd##NAME(const char *path, const char *name, TYPE *ptr, TriggerFunc tr
                 ((MenuEntry_Float32*)e)->variable = (float*)addr;
         }
     }
+}
+
+EXPORT void DebugMenuClear() {
+    toplevel.clear();
 }

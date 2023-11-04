@@ -88,7 +88,11 @@ struct Menu {
 
     void update();
     void draw();
-    Menu() { memset(this, 0, sizeof(Menu)); }
+    Menu() { clear(); }
+
+    void clear() {  
+        memset(this, 0, sizeof(Menu));
+    }
 };
 
 extern Menu toplevel;
