@@ -20,8 +20,14 @@ EXPORT MenuEntry* DebugMenuAdd##NAME(const char *path, const char *name, TYPE *p
 	Menu *m = findMenu(path); \
 	if(m == NULL) \
 		return NULL; \
-	MenuEntry *e = new MenuEntry_##NAME(name, ptr, triggerFunc, step, lowerBound, upperBound, strings); \
-	m->appendEntry(e); \
+	MenuEntry *e = m->findEntry(name); \
+    if (e == NULL) { \
+        e = new MenuEntry_##NAME(name, ptr, triggerFunc, step, lowerBound, upperBound, strings); \
+	    m->appendEntry(e); \
+    } \
+    else { \
+        ((MenuEntry_##NAME*)(e))->set(ptr, triggerFunc, step, lowerBound, upperBound, strings); \
+    } \
 	return e; \
 }
     INTTYPES
@@ -32,37 +38,45 @@ EXPORT MenuEntry* DebugMenuAdd##NAME(const char *path, const char *name, TYPE *p
 	Menu *m = findMenu(path); \
 	if(m == NULL) \
 		return NULL; \
-	MenuEntry *e = new MenuEntry_##NAME(name, ptr, triggerFunc, step, lowerBound, upperBound); \
-	m->appendEntry(e); \
+	MenuEntry *e = m->findEntry(name); \
+    if (e == NULL) { \
+        e = new MenuEntry_##NAME(name, ptr, triggerFunc, step, lowerBound, upperBound); \
+	    m->appendEntry(e); \
+    } \
+    else { \
+        ((MenuEntry_##NAME*)(e))->set(ptr, triggerFunc, step, lowerBound, upperBound); \
+    } \
 	return e; \
 }
         FLOATTYPES
 #undef X
 
-        EXPORT MenuEntry* \
-        DebugMenuAddCmd(const char* path, const char* name, TriggerFunc triggerFunc) {
+    EXPORT MenuEntry* DebugMenuAddCmd(const char* path, const char* name, TriggerFunc triggerFunc) {
         Menu* m = findMenu(path);
         if (m == NULL)
             return NULL;
-        MenuEntry* e = new MenuEntry_Cmd(name, triggerFunc);
-        m->appendEntry(e);
+        MenuEntry* e = m->findEntry(name);
+        if (e == NULL) {
+            e = new MenuEntry_Cmd(name, triggerFunc);
+            m->appendEntry(e);
+        }
+        else {
+            ((MenuEntry_Cmd*)(e))->set(triggerFunc);
+        }
         return e;
     }
 
-    EXPORT void
-        DebugMenuEntrySetWrap(MenuEntry* e, bool wrap) {
+    EXPORT void DebugMenuEntrySetWrap(MenuEntry* e, bool wrap) {
         if (e && e->type == MENUVAR)
             ((MenuEntry_Var*)e)->wrapAround = wrap;
     }
 
-    EXPORT void
-        DebugMenuEntrySetStrings(MenuEntry* e, const char** strings) {
+    EXPORT void DebugMenuEntrySetStrings(MenuEntry* e, const char** strings) {
         if (e && e->type == MENUVAR_INT)
             ((MenuEntry_Int*)e)->setStrings(strings);
     }
 
-    EXPORT void
-        DebugMenuEntrySetAddress(MenuEntry* e, void* addr) {
+    EXPORT void DebugMenuEntrySetAddress(MenuEntry* e, void* addr) {
         if (e && e->type == MENUVAR) {
             MenuEntry_Var* ev = (MenuEntry_Var*)e;
             // HACK - we know the variable field is at the same address
@@ -73,8 +87,4 @@ EXPORT MenuEntry* DebugMenuAdd##NAME(const char *path, const char *name, TYPE *p
                 ((MenuEntry_Float32*)e)->variable = (float*)addr;
         }
     }
-}
-
-EXPORT void DebugMenuClear() {
-    toplevel.clear();
 }

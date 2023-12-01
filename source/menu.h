@@ -58,7 +58,7 @@ struct MenuEntry {
     int type;
     const char* name;
     MenuEntry* next;
-    rage::Vector4 r;
+    rage::fwRect r;
     Menu* menu;
 
     MenuEntry(const char* name);
@@ -66,7 +66,7 @@ struct MenuEntry {
 
 struct Menu {
     Menu* parent;
-    rage::Vector4 r;
+    rage::fwRect r;
     MenuEntry* entries;
     int numEntries;
     int maxNameWidth, maxValWidth;
@@ -78,7 +78,7 @@ struct Menu {
     bool8 isScrollingUp, isScrollingDown;
     int scrollStart;
     int numVisible;
-    rage::Vector4 scrollUpR, scrollDownR;
+    rage::fwRect scrollUpR, scrollDownR;
     void scroll(int off);
 
     int selection;
@@ -147,7 +147,8 @@ struct MenuEntry_##NAME : MenuEntry_Int { \
  \
 	void setStrings(const char **strings); \
 	int findStringLen(); \
-	MenuEntry_##NAME(const char *name, TYPE *ptr, TriggerFunc triggerFunc, TYPE step, TYPE lowerBound, TYPE upperBound, const char **strings); \
+	MenuEntry_##NAME(const char *name, TYPE *ptr, TriggerFunc triggerFunc, TYPE step, TYPE lowerBound, TYPE upperBound, const char** strings); \
+    void set(TYPE *ptr, TriggerFunc triggerFunc, TYPE step, TYPE lowerBound, TYPE upperBound, const char** strings); \
 };
 MUHINTS
 #undef X
@@ -164,6 +165,7 @@ struct MenuEntry_##NAME : MenuEntry_Var { \
 	void getValStr(char *str, int len); \
  \
 	MenuEntry_##NAME(const char *name, TYPE *ptr, TriggerFunc triggerFunc, TYPE step, TYPE lowerBound, TYPE upperBound); \
+    void set(TYPE *ptr, TriggerFunc triggerFunc, TYPE step, TYPE lowerBound, TYPE upperBound); \
 };
 MUHFLOATS
 #undef X
@@ -175,6 +177,7 @@ struct MenuEntry_Cmd : MenuEntry_Var {
     void getValStr(char* str, int len);
 
     MenuEntry_Cmd(const char* name, TriggerFunc triggerFunc);
+    void set(TriggerFunc triggerFunc);
 };
 
 Menu* findMenu(const char* name);

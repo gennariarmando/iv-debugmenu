@@ -9,6 +9,8 @@
 
 #include "menu.h"
 
+#include "dxsdk/d3d9.h"
+
 #define snprintf _snprintf
 
 #define strdup _strdup
@@ -42,7 +44,7 @@ static int* buttonptr;
 static int button1justdown, button2justdown, button3justdown;
 static float mouseX, mouseY;
 
-static int menuOn = 0;
+int menuOn = 0;
 static int menuInitialized = 0;
 
 static int firstBorder = 10;
@@ -61,7 +63,7 @@ static int fontOutline = 1;
 static CSprite2d cursorSprite, fontSprite, arrowSprite;
 
 void drawMouse();
-void drawArrow(rage::Vector4 r, int direction, int style);
+void drawArrow(rage::fwRect r, int direction, int style);
 
 Menu toplevel;
 Menu* activeMenu = &toplevel;
@@ -73,18 +75,18 @@ MenuEntry scrollUpEntry("SCROLLUP"), scrollDownEntry("SCROLLDOWN");	// dummies
 DWORD prevMin, prevMag;
 
 void RestoreRenderStates() {
-    rage::GetD3DDevice()->SetSamplerState(0, D3DSAMP_MINFILTER, prevMin);
-    rage::GetD3DDevice()->SetSamplerState(0, D3DSAMP_MAGFILTER, prevMag);
+    GetD3DDevice<IDirect3DDevice9>()->SetSamplerState(0, D3DSAMP_MINFILTER, prevMin);
+    GetD3DDevice<IDirect3DDevice9>()->SetSamplerState(0, D3DSAMP_MAGFILTER, prevMag);
 }
 
 void SetRenderStates() {
-    rage::GetD3DDevice()->GetSamplerState(0, D3DSAMP_MINFILTER, &prevMin);
-    rage::GetD3DDevice()->GetSamplerState(0, D3DSAMP_MAGFILTER, &prevMag);
-    rage::GetD3DDevice()->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_POINT);
-    rage::GetD3DDevice()->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
+    GetD3DDevice<IDirect3DDevice9>()->GetSamplerState(0, D3DSAMP_MINFILTER, &prevMin);
+    GetD3DDevice<IDirect3DDevice9>()->GetSamplerState(0, D3DSAMP_MAGFILTER, &prevMag);
+    GetD3DDevice<IDirect3DDevice9>()->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_POINT);
+    GetD3DDevice<IDirect3DDevice9>()->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
 }
 
-bool isMouseInRect(rage::Vector4 r) {
+bool isMouseInRect(rage::fwRect r) {
     return (mouseX >= r.left && mouseX < r.left + r.right &&
         mouseY >= r.top && mouseY < r.top + r.bottom);
 }
@@ -191,6 +193,16 @@ MenuEntry_##NAME::MenuEntry_##NAME(const char *name, TYPE *ptr, TriggerFunc trig
 	this->maxvallen = MAXLEN; \
 	this->fmt = FMT; \
 	this->setStrings(strings); \
+} \
+void MenuEntry_##NAME::set(TYPE* ptr, TriggerFunc triggerFunc, TYPE step, TYPE lowerBound, TYPE upperBound, const char **strings) { \
+	this->variable = ptr; \
+	this->step = step; \
+	this->lowerBound = lowerBound; \
+	this->upperBound = upperBound; \
+	this->triggerFunc = triggerFunc; \
+	this->maxvallen = MAXLEN; \
+	this->fmt = FMT; \
+	this->setStrings(strings); \
 }
 MUHINTS
 #undef X
@@ -203,6 +215,15 @@ MUHINTS
 
 #define X(NAME, TYPE, MAXLEN, FMT) \
 MenuEntry_##NAME::MenuEntry_##NAME(const char *name, TYPE *ptr, TriggerFunc triggerFunc, TYPE step, TYPE lowerBound, TYPE upperBound) : MenuEntry_Var(name, MENUVAR_FLOAT) { \
+	this->variable = ptr; \
+	this->step = step; \
+	this->lowerBound = lowerBound; \
+	this->upperBound = upperBound; \
+	this->triggerFunc = triggerFunc; \
+	this->maxvallen = MAXLEN; \
+	this->fmt = FMT; \
+} \
+void MenuEntry_##NAME::set(TYPE* ptr, TriggerFunc triggerFunc, TYPE step, TYPE lowerBound, TYPE upperBound) { \
 	this->variable = ptr; \
 	this->step = step; \
 	this->lowerBound = lowerBound; \
@@ -270,6 +291,10 @@ MenuEntry_Cmd::MenuEntry_Cmd(const char* name, TriggerFunc triggerFunc)
     this->triggerFunc = triggerFunc;
 }
 
+void MenuEntry_Cmd::set(TriggerFunc triggerFunc) {
+    this->maxvallen = 1;
+    this->triggerFunc = triggerFunc;
+}
 
 /*
  * *****************************
@@ -397,7 +422,7 @@ void Menu::update() {
     this->scrollUpR = this->r;
     this->scrollUpR.bottom = 16;
     this->scrollDownR = this->scrollUpR;
-    this->scrollDownR.y = bottomy;
+    this->scrollDownR.top = bottomy;
 
     // Update active submenu
     if (this->selectedEntry && this->selectedEntry->type == MENUSUB) {
@@ -566,7 +591,7 @@ void processInput() {
             if (i >= mouseOverMenu->scrollStart + mouseOverMenu->numVisible)
                 break;
             if (i >= mouseOverMenu->scrollStart) {
-                rage::Vector4 r = e->r;
+                rage::fwRect r = e->r;
                 r.right = mouseOverMenu->r.right;	// span the whole menu
                 if (isMouseInRect(r)) {
                     mouseOverEntry = e;
@@ -706,7 +731,7 @@ EXPORT void DebugMenuProcess() {
 
         if (playa) {
             playa->m_pPlayerInfo->m_bDisableControls = menuOn;
-            playa->m_pPlayerInfo->m_PlayerData.m_Wanted.m_bIgnoredByEveryone = menuOn;
+            playa->m_pPlayerInfo->m_PlayerData.m_Wanted.m_EverybodyBackOff = menuOn;
         }
 
         if (cam)
@@ -731,7 +756,7 @@ EXPORT void DebugMenuRender() {
     if (!menuOn)
         return;
 
-    auto base = new T_CB_Generic([] {
+    auto base = new T_CB_Generic_NoArgs([] {
         Pt sz;
         sz = fontPrint("Debug Menu", firstBorder * fontscale, topBorder, 0);
 
@@ -744,7 +769,7 @@ EXPORT void DebugMenuRender() {
         drawMouse();
 
     });
-    base->Append();
+    base->Init();
 }
 
 EXPORT bool DebugMenuShowing() {
@@ -759,10 +784,10 @@ EXPORT int DebugMenuGetStringSize(const char* str) {
     return fontGetStringSize(str).x;
 }
 
-void drawArrow(rage::Vector4 r, int direction, int style) {
+void drawArrow(rage::fwRect r, int direction, int style) {
     SetRenderStates();
-    int width = arrowSprite.m_pTexture->getWidth();
-    int height = arrowSprite.m_pTexture->getHeight();
+    int width = arrowSprite.m_pTexture.Get()->GetWidth();
+    int height = arrowSprite.m_pTexture.Get()->GetHeight();
 
     float left = r.left + (r.right - width) / 2;
     float right = left + width;
@@ -782,9 +807,9 @@ void drawArrow(rage::Vector4 r, int direction, int style) {
         CSprite2d::DrawRect({ left - 1, top - 1, right + 1, bottom + 1 }, { 132, 132, 132, 255 });
     }
 
-    arrowSprite.Push();
+    arrowSprite.SetRenderState();
     CSprite2d::Draw({ left, top, right, bottom }, { umin, vmin, umax, vmax }, { 255, 255, 255, 255 });
-    CSprite2d::Pop();
+    CSprite2d::ClearRenderState();
     RestoreRenderStates();
 }
 
@@ -792,12 +817,12 @@ void drawMouse() {
     SetRenderStates();
     float x = mouseX;
     float y = mouseY;
-    float w = cursorSprite.m_pTexture->getWidth();
-    float h = cursorSprite.m_pTexture->getHeight();
+    float w = cursorSprite.m_pTexture.Get()->GetWidth();
+    float h = cursorSprite.m_pTexture.Get()->GetHeight();
 
-    cursorSprite.Push();
+    cursorSprite.SetRenderState();
     CSprite2d::Draw(x, y, w, h, { 255, 255, 255, 255 });
-    CSprite2d::Pop();
+    CSprite2d::ClearRenderState();
     RestoreRenderStates();
 }
 
@@ -828,10 +853,10 @@ Pt fontPrint(const char* s, float xstart, float ystart, int style) {
     x = xstart;
     y = ystart;
 
-    du = fontGlyphWidth / (float)fontSprite.m_pTexture->getWidth();
-    dv = fontGlyphHeight / (float)fontSprite.m_pTexture->getHeight();
-    uhalf = 0.5f / fontSprite.m_pTexture->getWidth();
-    vhalf = 0.5f / fontSprite.m_pTexture->getHeight();
+    du = fontGlyphWidth / (float)fontSprite.m_pTexture.Get()->GetWidth();
+    dv = fontGlyphHeight / (float)fontSprite.m_pTexture.Get()->GetHeight();
+    uhalf = 0.5f / fontSprite.m_pTexture.Get()->GetWidth();
+    vhalf = 0.5f / fontSprite.m_pTexture.Get()->GetHeight();
 
     Pt fntSize = fontGetStringSize(s);
     if (style == FONT_SEL_ACTIVE) {
@@ -851,10 +876,10 @@ Pt fontPrint(const char* s, float xstart, float ystart, int style) {
 
         if (c >= fontNumGlyphs)
             c = 0;
-        u = (c % 16) * fontGlyphWidth / (float)fontSprite.m_pTexture->getWidth();
-        v = (c / 16) * fontGlyphHeight / (float)fontSprite.m_pTexture->getHeight();
+        u = (c % 16) * fontGlyphWidth / (float)fontSprite.m_pTexture.Get()->GetWidth();
+        v = (c / 16) * fontGlyphHeight / (float)fontSprite.m_pTexture.Get()->GetHeight();
 
-        fontSprite.Push();
+        fontSprite.SetRenderState();
         if (fontShadow) {
             CSprite2d::Draw({ x + 1, y + 1, x + 1 + fontGlyphWidth * fontscale, y + 1 + fontGlyphHeight * fontscale }, { u, v, u + du + uhalf, v + dv + vhalf }, drop);
         }
@@ -866,7 +891,7 @@ Pt fontPrint(const char* s, float xstart, float ystart, int style) {
         }
         CSprite2d::Draw({ x, y, x + fontGlyphWidth * fontscale, y + fontGlyphHeight * fontscale }, { u, v, u + du + uhalf, v + dv + vhalf }, col);
     
-        CSprite2d::Pop();
+        CSprite2d::ClearRenderState();
 
         x += fontGlyphWidth * fontscale;
         szx += fontGlyphWidth * fontscale;
